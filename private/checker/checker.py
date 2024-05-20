@@ -408,7 +408,7 @@ class Exploit:
             self.ws.close()
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.CRITICAL)
 
 
 if __name__ == "__main__":
