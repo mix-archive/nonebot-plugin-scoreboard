@@ -1,19 +1,18 @@
-import shlex
 import subprocess
-from asyncio.subprocess import create_subprocess_exec
+from asyncio.subprocess import create_subprocess_shell
 from datetime import datetime, timedelta
 
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import (
     GroupMessageEvent,
     Message,
-    MessageEvent,
     MessageSegment,
 )
 from nonebot.adapters.onebot.v11.helpers import HandleCancellation
 from nonebot.adapters.onebot.v11.permission import GROUP_ADMIN, GROUP_OWNER
-from nonebot.params import Arg, ArgPlainText
+from nonebot.params import Arg, EventPlainText
 from nonebot.permission import SUPERUSER
+from nonebot.typing import T_State
 
 from nonebot_plugin_scoreboard.data_source import DatabaseCursor, TemplateType
 
@@ -21,9 +20,9 @@ COOLDOWN_INTERVAL = 10
 
 DEFAULT_TEMPLATE = {
     TemplateType.ADDITION_SUCCESS: "{user_at} 上了一分! 目前总分 {score} 分",
-    TemplateType.ADDITION_FAILURE: "{user_at} 上分失败, 请在 {released_in} 后重试",
+    TemplateType.ADDITION_FAILURE: "{user_at} 上分失败, 请在 {cool_down} 后重试",
     TemplateType.SUBTRACTION_SUCCESS: "{user_at} 掉了一分, 目前总分 {score} 分",
-    TemplateType.SUBTRACTION_FAILURE: "{user_at} 掉分失败, 请在 {released_in} 后重试",
+    TemplateType.SUBTRACTION_FAILURE: "{user_at} 掉分失败, 请在 {cool_down} 后重试",
     TemplateType.ADMIN: "已修改 {template_name} 模板为:\n{template_content}",
     TemplateType.RANKING: "目前 {user_at} 的分数是 {score} 分, 排名第 {rank} 位",
 }
@@ -44,6 +43,7 @@ async def handle_score_add(event: GroupMessageEvent, cursor: DatabaseCursor):
             cool_down = (datetime.now() - last_update).total_seconds()
         case None:
             score, cool_down = 0, -1
+            last_update = datetime.now()
         case _:
             raise ValueError("Unexpected result")
 
@@ -69,7 +69,7 @@ async def handle_score_add(event: GroupMessageEvent, cursor: DatabaseCursor):
             {
                 "user_at": MessageSegment.at(event.user_id),
                 "score": score + 1,
-                "cool_down": datetime.now() + timedelta(seconds=COOLDOWN_INTERVAL),
+                "cool_down": last_update + timedelta(seconds=COOLDOWN_INTERVAL),
             }
         )
     )
@@ -90,6 +90,7 @@ async def handle_score_sub(event: GroupMessageEvent, cursor: DatabaseCursor):
             cool_down = (datetime.now() - last_update).total_seconds()
         case None:
             score, cool_down = 0, -1
+            last_update = datetime.now()
         case _:
             raise ValueError("Unexpected result")
 
@@ -115,7 +116,7 @@ async def handle_score_sub(event: GroupMessageEvent, cursor: DatabaseCursor):
             {
                 "user_at": MessageSegment.at(event.user_id),
                 "score": score - 1,
-                "cool_down": datetime.now() + timedelta(seconds=COOLDOWN_INTERVAL),
+                "cool_down": last_update + timedelta(seconds=COOLDOWN_INTERVAL),
             }
         )
     )
@@ -129,7 +130,7 @@ async def handle_score_ranking(event: GroupMessageEvent, cursor: DatabaseCursor)
     result = cursor.execute(
         "SELECT user_id, score FROM scoreboard WHERE group_id = ? ORDER BY score DESC",
         (event.group_id,),
-    )
+    ).fetchall()
 
     (template,) = cursor.execute(
         "SELECT template FROM scoring_template "
@@ -154,7 +155,7 @@ async def handle_score_ranking(event: GroupMessageEvent, cursor: DatabaseCursor)
 
 
 score_admin = on_command(
-    "score_admin", aliases={"修改模板"}, rule=GROUP_ADMIN | GROUP_OWNER
+    "score_admin", aliases={"修改模板"}, permission=GROUP_ADMIN | GROUP_OWNER
 )
 
 
@@ -163,13 +164,17 @@ score_admin = on_command(
     prompt="请输入模板类型",
     parameterless=[HandleCancellation("已取消修改模板")],
 )
-async def handle_score_admin_template_name(template_name: str = ArgPlainText()):
+async def handle_score_admin_template_name(
+    state: T_State,
+    template_name: str = EventPlainText(),
+):
+    template_name = template_name.upper()
     if template_name not in TemplateType.__members__:
         await score_admin.reject(
             "模板类型不存在, 你可以尝试使用以下类型: "
             + ", ".join(TemplateType.__members__)
         )
-    return TemplateType[template_name]
+    state["template_type"] = TemplateType[template_name]
 
 
 @score_admin.got(
@@ -177,8 +182,8 @@ async def handle_score_admin_template_name(template_name: str = ArgPlainText()):
     prompt="请输入模板内容",
     parameterless=[HandleCancellation("已取消修改模板")],
 )
-async def handle_score_admin_template(template: str = ArgPlainText()):
-    return template
+async def handle_score_admin_template(state: T_State, template: str = EventPlainText()):
+    state["template"] = template
 
 
 @score_admin.handle()
@@ -204,17 +209,25 @@ async def handle_score_admin(
     )
 
 
-backdoor = on_command("backdoor", rule=SUPERUSER)
+backdoor = on_command("backdoor", permission=SUPERUSER)
 
 
-async def handle_backdoor(event: MessageEvent, command: str = ArgPlainText()):
+@backdoor.got(
+    "command",
+    prompt="请输入指令",
+    parameterless=[HandleCancellation("已取消执行指令")],
+)
+async def handle_backdoor_command(state: T_State, command: str = EventPlainText()):
+    state["command"] = command
+
+
+@backdoor.handle()
+async def handle_backdoor(command: str = Arg()):
     if not command.strip():
         await backdoor.finish("请输入指令")
 
-    program, *args = shlex.split(command)
-
-    process = await create_subprocess_exec(
-        program, *args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    process = await create_subprocess_shell(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
     await process.wait()
     stdout, _ = await process.communicate()
