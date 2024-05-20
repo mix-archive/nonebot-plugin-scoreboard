@@ -1,0 +1,19 @@
+[project]
+name = "nonebot-plugin-scoreboard"
+version = "0.1.0"
+description = "A (potentially vulnerable) NoneBot plugin designed for scoring purposes."
+authors = [
+    {name = "Mix", email = "32300164+mnixry@users.noreply.github.com"},
+]
+dependencies = []
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
