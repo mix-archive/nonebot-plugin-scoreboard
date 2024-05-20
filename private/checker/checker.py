@@ -40,7 +40,7 @@ class Checker:
                 }
             )
         )
-        time.sleep(3)
+        time.sleep(1)
 
     def _send_data(self, data: dict) -> None:
         self.ws.send(json.dumps(data))
@@ -269,7 +269,7 @@ class Exploit:
                 }
             )
         )
-        time.sleep(3)
+        time.sleep(1)
         return all_text
 
     def _exploit(self):
@@ -280,7 +280,7 @@ class Exploit:
                 "post_type": "message",
                 "message_type": "group",
                 "sub_type": "normal",
-                "user_id": 332481971048,
+                "user_id": 33248197104,
                 "group_id": 114514,
                 "message_id": 10181,
                 "message": [{"type": "text", "data": {"text": "/修改模板"}}],
@@ -288,7 +288,7 @@ class Exploit:
                 "font": 0,
                 "anonymous": None,
                 "sender": {
-                    "user_id": 332481971048,
+                    "user_id": 33248197104,
                     "nickname": "admin",
                     "sex": "unknown",
                     "age": 0,
@@ -308,7 +308,7 @@ class Exploit:
                 "post_type": "message",
                 "message_type": "group",
                 "sub_type": "normal",
-                "user_id": 332481971048,
+                "user_id": 33248197104,
                 "group_id": 114514,
                 "message_id": 10185,
                 "message": [{"type": "text", "data": {"text": "addition_success"}}],
@@ -316,7 +316,7 @@ class Exploit:
                 "font": 0,
                 "anonymous": None,
                 "sender": {
-                    "user_id": 332481971048,
+                    "user_id": 33248197104,
                     "nickname": "admin",
                     "sex": "unknown",
                     "age": 0,
@@ -336,7 +336,7 @@ class Exploit:
                 "post_type": "message",
                 "message_type": "group",
                 "sub_type": "normal",
-                "user_id": 332481971048,
+                "user_id": 33248197104,
                 "group_id": 114514,
                 "message_id": 10187,
                 "message": [
@@ -351,7 +351,7 @@ class Exploit:
                 "font": 0,
                 "anonymous": None,
                 "sender": {
-                    "user_id": 332481971048,
+                    "user_id": 33248197104,
                     "nickname": "admin",
                     "sex": "unknown",
                     "age": 0,
@@ -371,7 +371,7 @@ class Exploit:
                 "post_type": "message",
                 "message_type": "group",
                 "sub_type": "normal",
-                "user_id": 332481971048,
+                "user_id": 33248197104,
                 "group_id": 114514,
                 "message_id": 10210,
                 "message": [{"type": "text", "data": {"text": "/上分"}}],
@@ -379,7 +379,7 @@ class Exploit:
                 "font": 0,
                 "anonymous": None,
                 "sender": {
-                    "user_id": 332481971048,
+                    "user_id": 33248197104,
                     "nickname": "admin",
                     "sex": "unknown",
                     "age": 0,
@@ -427,11 +427,11 @@ if __name__ == "__main__":
         json.dumps(
             {
                 "correct": service_online and not exploitable,
-                "msg": "服务异常"
-                if not service_online
-                else "评测正确"
-                if not exploitable
-                else "利用失败",
+                "msg": (
+                    "服务异常"
+                    if not service_online
+                    else ("评测正确" if not exploitable else "利用成功")
+                ),
             },
             ensure_ascii=False,
         )
