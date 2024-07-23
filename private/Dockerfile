@@ -14,12 +14,14 @@ RUN --mount=type=cache,target=/tmp \
 
 ARG SUPERUSERS
 ENV HOST=0.0.0.0 \
-    PORT=8080 \
+    PORT=80 \
     SUPERUSERS=$SUPERUSERS
 
 RUN useradd -M -s /bin/bash bot && \
     mkdir /project/data && \
     chown -R bot:bot /project/data
+
+EXPOSE 80/tcp
 
 CMD ["tini", "--", "/bin/bash", "-c", "\
     echo $FLAG > /flag && \
