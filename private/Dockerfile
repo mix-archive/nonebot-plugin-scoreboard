@@ -26,7 +26,7 @@ EXPOSE 80/tcp
 CMD ["tini", "--", "/bin/bash", "-c", "\
     echo $FLAG > /flag && \
     unset FLAG && \
-    exec su bot -c 'python bot.py'"]
+    exec su bot -c 'exec python bot.py'"]
 
 FROM base AS private
 
