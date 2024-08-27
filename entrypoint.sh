@@ -11,7 +11,7 @@ function start() {
 
 start &
 
-while inotifywait -e modify,create,delete -r ./bot.py ./src; do
-    su bot -c 'kill -TERM -1'
+while inotifywait -e modify,create,delete -r ./src ./bot.py || true; do
+    su bot -c 'kill -TERM -1' && wait
     start &
 done
