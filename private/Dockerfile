@@ -1,7 +1,7 @@
 FROM python:slim AS base
 
 RUN apt-get update && \
-    apt-get install -y sudo tini && \
+    apt-get install -y sudo tini bash inotify-tools unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -10,7 +10,8 @@ COPY src/ /project/src
 
 WORKDIR /project
 RUN --mount=type=cache,target=/tmp \
-    pip install -e . --cache-dir /tmp
+    pip install -e . --cache-dir /tmp && \
+    pip install requests --cache-dir /tmp
 
 ARG SUPERUSERS
 ENV HOST=0.0.0.0 \
@@ -22,11 +23,8 @@ RUN useradd -M -s /bin/bash bot && \
     chown -R bot:bot /project/data
 
 EXPOSE 80/tcp
-
-CMD ["tini", "--", "/bin/bash", "-c", "\
-    echo $FLAG > /flag && \
-    unset FLAG && \
-    exec su bot -c 'exec python bot.py'"]
+COPY entrypoint.sh /entrypoint.sh
+CMD ["tini", "--", "/entrypoint.sh"]
 
 FROM base AS private
 
